@@ -18,7 +18,7 @@ spec:
         app: client
     spec:
       containers:
-        - image: gcr.io/tfg-ivo/github.com/ivosequeros/gaze-client:latest
+        - image: gcr.io/tfg-ivo/github.com/ivosequeros/gaze-client
           imagePullPolicy: IfNotPresent
           name: client-sha256-1
       nodeSelector:
