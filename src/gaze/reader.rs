@@ -52,10 +52,6 @@ impl Reader {
 
                     println!("AddModel for {}", std::str::from_utf8(&id).unwrap());
                     
-                    let mut pending_acknowledgements = reader.pending_acknowledgements.lock().await;
-                    let sender = pending_acknowledgements.remove(&id).unwrap();
-                    sender.send(false).unwrap();
-
                     ();
                 },
                 _ => {

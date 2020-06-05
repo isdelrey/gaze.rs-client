@@ -29,7 +29,7 @@ use rand::distributions::Alphanumeric;
 pub struct Gaze {
     pub writer: Arc<Mutex<OwnedWriteHalf>>,
     pub reader: Arc<Reader>,
-    models: Arc<Mutex<HashMap<String, Schema>>>
+    models: HashMap<String, Schema>
 }
 
 impl Gaze {
@@ -57,7 +57,7 @@ impl Gaze {
         let reader = Arc::new(Reader::new());
 
         /* Spawn reader: */
-        tokio::spawn(Reader::read(reader.clone(), models, stream_reader.clone()));
+        tokio::spawn(Reader::read(reader.clone(),  stream_reader.clone()));
 
         Ok(Gaze {
             writer,
@@ -129,7 +129,7 @@ impl Gaze {
         self.models.insert(id.clone(), model.clone());
         println!("{}: {:?}", id, model);
         
-        {
+        /*{
             let mut writer = self.writer.lock().await;
 
             /* Get message id: */
@@ -144,7 +144,7 @@ impl Gaze {
             /* Write message: */
             println!("{:?} {}", raw_definition, std::str::from_utf8(encoded_message.as_slice()).unwrap());
             writer.write(raw_definition).await.unwrap();
-        }
+        }*/
 
         Ok(id)
     }
