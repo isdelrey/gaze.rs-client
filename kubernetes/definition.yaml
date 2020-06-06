@@ -18,11 +18,11 @@ spec:
         app: client
     spec:
       containers:
-        - image: gcr.io/tfg-ivo/github.com/ivosequeros/gaze-client
+        - image: gcr.io/tfg-ivo/github.com/ivosequeros/gaze-client:4caf442dc631b40869e0b812df9208d8b478f936
           imagePullPolicy: IfNotPresent
           name: client-sha256-1
           env:
-            name: SERVER_SERVICE_HOST
-            value: 10.0.18.214
+            - name: HOST
+              value: server:80
       nodeSelector:
         node: client

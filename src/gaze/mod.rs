@@ -34,12 +34,12 @@ pub struct Gaze {
 
 impl Gaze {
     pub async fn connect() -> Result<Gaze, Box<dyn Error>> {
-        let ip = std::env::var("SERVER_SERVICE_HOST").unwrap();
-        println!("About to connect to Gaze on {}:6142", ip);
+        let host = std::env::var("HOST").unwrap();
+        println!("About to connect to Gaze on {}", host);
 
-        let stream: TcpStream = match TcpStream::connect(format!("{}:6142", ip)).await {
+        let stream: TcpStream = match TcpStream::connect(host).await {
             Ok(stream) => {
-                println!("Connected to Gaze on {}:6142", ip);
+                println!("Connected to Gaze on {}", host);
                 stream
             },
             Err(error) => {
