@@ -32,7 +32,7 @@ pub async fn run() {
 
 
     /* Publish: */
-    for _ in 1..100000 {
+    loop {
         let message = Message {
             name: "Ivo".to_string(),
             age: 24
