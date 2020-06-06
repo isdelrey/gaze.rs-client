@@ -37,7 +37,7 @@ impl Gaze {
         let host = std::env::var("HOST").unwrap();
         println!("About to connect to Gaze on {}", host);
 
-        let stream: TcpStream = match TcpStream::connect(host).await {
+        let stream: TcpStream = match TcpStream::connect(host.clone()).await {
             Ok(stream) => {
                 println!("Connected to Gaze on {}", host);
                 stream
