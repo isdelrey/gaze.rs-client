@@ -23,6 +23,6 @@ spec:
           name: client-sha256-1
           env:
             - name: HOST
-              value: server:80
+              value: 35.246.189.35:6142
       nodeSelector:
         node: client
