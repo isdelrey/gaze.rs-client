@@ -57,7 +57,7 @@ impl Gaze {
         let reader = Arc::new(Reader::new());
 
         /* Spawn reader: */
-        tokio::spawn(Reader::read(reader.clone(),  stream_reader.clone()));
+        tokio::spawn(Reader::read(reader.clone(), stream_reader.clone()));
 
         Ok(Gaze {
             writer,
@@ -108,7 +108,7 @@ impl Gaze {
             writer.write(encoded_message.as_slice()).await.unwrap();
         }
 
-        self.reader.expect_ack(id).await.unwrap();
+        //self.reader.expect_ack(id).await.unwrap();
 
         Ok(())
     }
