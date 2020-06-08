@@ -6,7 +6,7 @@ metadata:
   name: client
   namespace: default
 spec:
-  replicas: 100
+  replicas: 10
   strategy:
     type: Recreate
   selector:
