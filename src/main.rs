@@ -6,8 +6,8 @@ use futures::future::{join_all};
 
 #[tokio::main]
 async fn main() {
-    loop {
-        actor::run().await;
+    for i in 1..20 {
+        tokio::spawn(actor::run());
     }
     ()
 }
