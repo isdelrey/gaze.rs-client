@@ -9,5 +9,7 @@ async fn main() {
     for i in 1..20 {
         tokio::spawn(actor::run());
     }
+
+    thread::park();
     ()
 }
