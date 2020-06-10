@@ -18,7 +18,7 @@ spec:
         app: client
     spec:
       containers:
-        - image: gcr.io/tfg-ivo/github.com/ivosequeros/gaze-client@sha256:8cbead04f51b6327394bef0a021997300f03bdc698da64cf024185bde115127d
+        - image: gcr.io/tfg-ivo/github.com/ivosequeros/gaze-client
           imagePullPolicy: IfNotPresent
           name: client-sha256-1
           env:
