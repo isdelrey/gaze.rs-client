@@ -1,0 +1,13 @@
+[package]
+name = "gaze_macros"
+version = "0.1.0"
+authors = ["Ivo Sequeros <ivosequeros@me.com>"]
+edition = "2018"
+
+[dependencies]
+syn = "1.0"
+quote = "1.0"
+proc-macro2 = "1.0.18"
+
+[lib]
+proc-macro = true

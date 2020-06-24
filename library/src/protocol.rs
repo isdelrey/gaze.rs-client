@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use crate::gaze::numbers::VarIntEncoder;
-use crate::gaze::command::Command;
+use crate::numbers::VarIntEncoder;
+use crate::command::Command;
 use tokio::io::{AsyncReadExt,AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use std::convert::TryFrom;
@@ -9,6 +9,7 @@ use std::convert::TryFrom;
 pub trait ReadProtocol {
     async fn read_command(&mut self) -> Result<Command, ()>;
     async fn read_ack(&mut self) -> Vec<u8>;
+    async fn read_message(&mut self) -> (Vec<u8>, u32);
 }
 
 #[async_trait]
@@ -29,6 +30,17 @@ impl ReadProtocol for OwnedReadHalf {
 
         received_id
     }
+
+
+    async fn read_message(&mut self) -> (Vec<u8>, u32) {
+        let mut raw_length  = [0u8; 4];
+        self.read_exact(&mut raw_length).await.unwrap();
+        let length = u32::from_le_bytes(raw_length);
+        
+        let message = vec![0u8; length as usize];
+
+        (message, length)
+    }
 }
 
 
@@ -45,9 +57,8 @@ pub trait WriteProtocol {
 impl WriteProtocol for OwnedWriteHalf {
     async fn write_size(&mut self, size: usize) {
         println!("Size is: {}", size);
-        let size = size.encode_as_varint();
-        println!("Encoded size is: {:?}", size);
-        self.write(size.as_slice()).await.unwrap();
+
+        self.write(&size.to_le_bytes()).await.unwrap();
     }
 
     async fn write_command(&mut self, command: Command) {
@@ -55,12 +66,12 @@ impl WriteProtocol for OwnedWriteHalf {
     }
 
     async fn write_ack(&mut self, id: Vec<u8>) {
-        self.write_command(Command::Ack);
+        self.write_command(Command::Ack).await;
         self.write(&id).await.unwrap();
     }
 
     async fn write_nack(&mut self, id: Vec<u8>) {
-        self.write_command(Command::Nack);
+        self.write_command(Command::Nack).await;
         self.write(&id).await.unwrap();
     }
 

@@ -8,7 +8,8 @@ pub enum Command {
     Ack = 0x06, /* UTF8: ACK */
     Nack = 0x15, /* UTF8: NACK */
     AddModel = 0x16,
-    GetModels = 0x17
+    GetModels = 0x17,
+    Push = 0x18
 }
 
 impl TryFrom<u8> for Command {

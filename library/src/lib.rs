@@ -2,16 +2,15 @@
 
 pub mod protocol;
 pub mod numbers;
-pub mod time;
 pub mod command;
 pub mod reader;
+pub mod message;
 
 use std::error::Error;
 use std::boxed::Box;
 use tokio::net::TcpStream;
 use protocol::{ReadProtocol, WriteProtocol};
-use avro_rs::{Schema, to_avro_datum, to_value};
-use serde_json::{Value};
+use avro_rs::{Schema, to_avro_datum, to_value, types::Value};
 use tokio::net::tcp::{OwnedWriteHalf};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use futures::lock::Mutex;
@@ -21,15 +20,17 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use reader::Reader;
 use std::time::SystemTime;
-use crate::gaze::time::SmallestReadableString;
-use rand::{Rng, thread_rng};
-use std::iter;
-use rand::distributions::Alphanumeric;
+use rand::{thread_rng};
+use rand::RngCore;
+use fasthash::{xx};
+use std::sync::mpsc::{Sender, Receiver, channel};
+pub use gaze_macros::message_type;
+use message::WithMessageType;
 
 pub struct Gaze {
     pub writer: Arc<Mutex<OwnedWriteHalf>>,
     pub reader: Arc<Reader>,
-    models: HashMap<String, Schema>
+    models: HashMap<Vec<u8>, Schema>
 }
 
 impl Gaze {
@@ -66,39 +67,52 @@ impl Gaze {
         })
     }
     fn generate_id() -> Vec<u8> {
-        let mut ns = [0u8; 6];
-        let ns = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().to_smallest_readable_string(&mut ns);
+        let timestamp_as_u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
+        let mut timestamp = timestamp_as_u64.to_le_bytes();
 
-        let random: String;
         {
-
             let mut rng = thread_rng();
-            random = iter::repeat(())
-            .map(|()| rng.sample(Alphanumeric) )
-            .take(4).collect();
+            rng.fill_bytes(&mut timestamp[1..4]);
         }
 
-        let id = [ns, random.as_bytes()].concat();
-        println!("Generated id: {:?}", id);
+        let last_byte_random = timestamp[1];
+        let last_byte_mask = 0b1111_1100;
+        timestamp[2] = last_byte_random | last_byte_mask;
 
-        id
+        let id = &timestamp[2..8];
+        
+        Vec::from(id)
     }
-    pub async fn publish<T: Serialize>(&self, model_id: String, message: T) -> Result<(), Box<dyn Error>> {
+    fn hash_message_type(message_type: String) -> Vec<u8> {
+        Vec::from(&xx::hash32(message_type.as_bytes()).to_le_bytes()[..])
+    }
+    pub async fn subscribe(&self, filter: serde_json::Value) -> Receiver<Value> {
+        let (sender, receiver) = channel::<Value>();
+
+        receiver
+    }
+    pub async fn publish<T: Serialize + WithMessageType>(&self, message: T) -> Result<(), Box<dyn Error>> {
         let id = Gaze::generate_id();
+
         {
             let mut writer = self.writer.lock().await;
 
-            let model: &Schema = self.models.get(&model_id).unwrap();
+            let message_type = Gaze::hash_message_type(message.get_message_type());
+
+            let model: &Schema = self.models.get(&message_type).unwrap();
             
 
             /* Validate and write model: */
             let encoded_message = to_avro_datum(model, to_value(message).unwrap()).unwrap();
             
-            /* Get message id: */
+            /* Write command: */
             writer.write_command(Command::Publish).await;
 
-            /* Get message id: */
+            /* Write message id: */
             let id = writer.write_id(&id).await;
+
+            /* Write message id: */
+            writer.write(&message_type).await.unwrap();
 
             /* Write length: */
             writer.write_size(encoded_message.len()).await;
@@ -112,8 +126,7 @@ impl Gaze {
 
         Ok(())
     }
-    pub async fn add_model(&mut self, raw_definition: &str) -> Result<String, Box<dyn Error>> {
-        let definition: Value = serde_json::from_str(raw_definition)?;
+    pub async fn add_model(&mut self, definition: serde_json::Value) -> Result<Vec<u8>, Box<dyn Error>> {
 
         let root_name = match definition.get("name") {
             Some(value) if value.is_string() => value.as_str().unwrap().to_string(),
@@ -125,9 +138,10 @@ impl Gaze {
         };
         let model: Schema = Schema::parse(&definition)?;
 
-        let id = [root_namespace, root_name].concat();
-        self.models.insert(id.clone(), model.clone());
-        println!("{}: {:?}", id, model);
+        let full_message_type = [root_namespace, root_name].concat();
+        let message_type = Gaze::hash_message_type(full_message_type);
+        self.models.insert(message_type.clone(), model.clone());
+        println!("{:?}: {:?}", &message_type, model);
         
         /*{
             let mut writer = self.writer.lock().await;
@@ -136,7 +150,7 @@ impl Gaze {
             writer.write_command(Command::AddModel).await;
 
             /* Get message id: */
-            let id = writer.write_id(&id).await;
+            let id = writer.write_id(&message_type[..]).await;
 
             /* Write length: */
             writer.write_size(raw_definition.len()).await;
@@ -146,6 +160,6 @@ impl Gaze {
             writer.write(raw_definition).await.unwrap();
         }*/
 
-        Ok(id)
+        Ok(message_type)
     }
 }

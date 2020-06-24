@@ -1,5 +1,5 @@
 [package]
-name = "gazeclient"
+name = "gaze"
 version = "0.1.0"
 authors = ["Ivo Sequeros <ivosequeros@me.com>"]
 edition = "2018"
@@ -15,4 +15,24 @@ tokio = { version = "0.2.21", features = ["full"] }
 tokio-util = { version = "0.3", features = ["full"] }
 async-trait = "0.1.31"
 fasthash = "0.4.0"
-gaze = { path = "library" }
+gaze_macros = { path = "../macros" }
+
+[[bench]]
+name = "id_benchmark"
+harness = false
+
+[[bench]]
+name = "num_id_benchmark"
+harness = false
+
+[[bench]]
+name = "byte_transmission"
+harness = false
+
+[[bench]]
+name = "read_benchmark"
+harness = false
+
+[[bench]]
+name = "decode_benchmark"
+harness = false
