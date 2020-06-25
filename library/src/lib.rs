@@ -107,6 +107,9 @@ impl Gaze {
         /* Write command: */
         writer.write_command(Command::Publish).await;
 
+        /* Write offset: */
+        let id = writer.write_id(&offset.to_le_bytes()).await;
+
         /* Write subscription id: */
         let id = Gaze::generate_subscription_id();
         let id = writer.write_id(&id).await;
