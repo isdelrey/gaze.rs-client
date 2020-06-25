@@ -18,6 +18,12 @@ pub fn message_type(metadata: TokenStream, input: TokenStream) -> TokenStream {
         #[derive(Serialize, Debug)]
         #input
 
+        impl #name {
+            fn filter(filter: serde_json::Value) -> serde_json::Value {
+                filter
+            }
+        }
+
         impl WithMessageType for #name {
             fn get_message_type(&self) -> String {
                 String::from(#type_name)

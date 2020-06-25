@@ -66,7 +66,7 @@ impl Gaze {
             models: HashMap::new()
         })
     }
-    fn generate_id() -> Vec<u8> {
+    fn generate_message_id() -> Vec<u8> {
         let timestamp_as_u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
         let mut timestamp = timestamp_as_u64.to_le_bytes();
 
@@ -83,16 +83,46 @@ impl Gaze {
         
         Vec::from(id)
     }
+    fn generate_subscription_id() -> Vec<u8> {
+        let timestamp_as_u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64;
+        let mut timestamp = timestamp_as_u64.to_le_bytes();
+
+        {
+            let mut rng = thread_rng();
+            rng.fill_bytes(&mut timestamp[2..4]);
+        }
+
+        let id = &timestamp[2..6];
+        
+        Vec::from(id)
+    }
     fn hash_message_type(message_type: String) -> Vec<u8> {
         Vec::from(&xx::hash32(message_type.as_bytes()).to_le_bytes()[..])
     }
-    pub async fn subscribe(&self, filter: serde_json::Value) -> Receiver<Value> {
+    pub async fn subscribe(&self, filters: Vec<serde_json::Value>, offset: u32) -> Receiver<Value> {
         let (sender, receiver) = channel::<Value>();
+
+        let mut writer = self.writer.lock().await;
+        
+        /* Write command: */
+        writer.write_command(Command::Publish).await;
+
+        /* Write subscription id: */
+        let id = Gaze::generate_subscription_id();
+        let id = writer.write_id(&id).await;
+        
+        let raw_schema: String = serde_json::Value::Array(filters).to_string();
+
+        /* Write raw schema size: */
+        writer.write(&(raw_schema.len() as u32).to_le_bytes()).await.unwrap();
+
+        /* Write raw schema: */
+        writer.write(raw_schema.as_bytes()).await.unwrap();
 
         receiver
     }
     pub async fn publish<T: Serialize + WithMessageType>(&self, message: T) -> Result<(), Box<dyn Error>> {
-        let id = Gaze::generate_id();
+        let id = Gaze::generate_message_id();
 
         {
             let mut writer = self.writer.lock().await;
@@ -127,6 +157,7 @@ impl Gaze {
         Ok(())
     }
     pub async fn add_model(&mut self, definition: serde_json::Value) -> Result<Vec<u8>, Box<dyn Error>> {
+        let raw_definition = definition.as_str().unwrap();
 
         let root_name = match definition.get("name") {
             Some(value) if value.is_string() => value.as_str().unwrap().to_string(),
@@ -143,22 +174,21 @@ impl Gaze {
         self.models.insert(message_type.clone(), model.clone());
         println!("{:?}: {:?}", &message_type, model);
         
-        /*{
+        {
             let mut writer = self.writer.lock().await;
 
-            /* Get message id: */
+            /* Write command */
             writer.write_command(Command::AddModel).await;
 
-            /* Get message id: */
-            let id = writer.write_id(&message_type[..]).await;
+            /* Write message type: */
+            let id = writer.write(&message_type[..]).await;
 
             /* Write length: */
-            writer.write_size(raw_definition.len()).await;
+            writer.write(&(raw_definition.len() as u32).to_le_bytes()).await;
 
             /* Write message: */
-            println!("{:?} {}", raw_definition, std::str::from_utf8(encoded_message.as_slice()).unwrap());
-            writer.write(raw_definition).await.unwrap();
-        }*/
+            writer.write(raw_definition.as_bytes()).await.unwrap();
+        }
 
         Ok(message_type)
     }

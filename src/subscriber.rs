@@ -1,10 +1,9 @@
-use gaze::Gaze;
+use gaze::{Gaze, message_type, message::WithMessageType};
 use serde::Serialize;
 use serde_json::json;
 
-
-#[derive(Serialize)]
-struct Message {
+#[message_type("my.company.user_created")]
+struct UserCreated {
     name: String,
     age: i64
 }
@@ -30,15 +29,9 @@ pub async fn run() {
 
 
     /* Subscribe: */
-    gaze.subscribe(json!({
-        "type": "record",
-        "namespace": "my.company",
-        "name": "user_created",
-        "fields": [
-            {"name": "name", "type": "string"},
-            {"name": "age", "type": "long"}
-        ]
-    })).await;
+    gaze.subscribe(vec![
+        UserCreated::filter(json!({}))
+    ], 0).await;
 
     ()
 }
