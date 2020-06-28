@@ -1,9 +1,9 @@
-use async_trait::async_trait;
-use crate::numbers::VarIntEncoder;
 use crate::command::Command;
-use tokio::io::{AsyncReadExt,AsyncWriteExt};
-use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
+use crate::numbers::VarIntEncoder;
+use async_trait::async_trait;
 use std::convert::TryFrom;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 
 #[async_trait]
 pub trait ReadProtocol {
@@ -19,8 +19,7 @@ impl ReadProtocol for OwnedReadHalf {
 
         match self.read_exact(&mut command).await {
             Ok(_) => Ok(Command::try_from(command[0]).unwrap()),
-            Err(_) => Err(())
-
+            Err(_) => Err(()),
         }
     }
 
@@ -31,25 +30,22 @@ impl ReadProtocol for OwnedReadHalf {
         received_id
     }
 
-
     async fn read_message(&mut self) -> (Vec<u8>, u32) {
-        let mut raw_length  = [0u8; 4];
+        let mut raw_length = [0u8; 4];
         self.read_exact(&mut raw_length).await.unwrap();
         let length = u32::from_le_bytes(raw_length);
-        
         let message = vec![0u8; length as usize];
 
         (message, length)
     }
 }
 
-
 #[async_trait]
 pub trait WriteProtocol {
     async fn write_command(&mut self, command: Command);
     async fn write_size(&mut self, size: usize);
-    async fn write_ack(&mut self, id: Vec<u8>);
-    async fn write_nack(&mut self, id: Vec<u8>);
+    async fn write_message_ack(&mut self, id: Vec<u8>);
+    async fn write_message_nack(&mut self, id: Vec<u8>);
     async fn write_id(&mut self, id: &[u8]);
 }
 
@@ -65,13 +61,13 @@ impl WriteProtocol for OwnedWriteHalf {
         self.write(&[command as u8]).await.unwrap();
     }
 
-    async fn write_ack(&mut self, id: Vec<u8>) {
-        self.write_command(Command::Ack).await;
+    async fn write_message_ack(&mut self, id: Vec<u8>) {
+        self.write_command(Command::MessageAck).await;
         self.write(&id).await.unwrap();
     }
 
-    async fn write_nack(&mut self, id: Vec<u8>) {
-        self.write_command(Command::Nack).await;
+    async fn write_message_nack(&mut self, id: Vec<u8>) {
+        self.write_command(Command::MessageNack).await;
         self.write(&id).await.unwrap();
     }
 

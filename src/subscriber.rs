@@ -8,7 +8,7 @@ struct UserCreated {
     age: i64
 }
 
-pub async fn run() {
+pub async fn run() -> Result<(), ()> {
     /* Report start: */
     println!("Subscriber running...");
 
@@ -17,7 +17,7 @@ pub async fn run() {
 
     
     /* Add model: */
-    let id = gaze.add_model(json!({
+    gaze.add_model(json!({
         "type": "record",
         "namespace": "my.company",
         "name": "user_created",
@@ -29,9 +29,16 @@ pub async fn run() {
 
 
     /* Subscribe: */
-    gaze.subscribe(vec![
-        UserCreated::filter(json!({}))
-    ], 0).await;
+    gaze.subscribe(json!([{
+        "$type": "",
+        "age": {"$gt": 20},
+        "name": "Ivo"
+    }]), 0).await?;
 
-    ()
+    // gaze.subscribe(filter!{
+    //     UserCreated if name == "Ivo" && age > 20
+    // });
+
+
+    Ok(())
 }
