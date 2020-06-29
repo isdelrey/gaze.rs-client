@@ -18,17 +18,18 @@ use serde::ser::Serialize;
 use std::boxed::Box;
 use std::collections::HashMap;
 use std::error::Error;
-use std::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 use std::time::SystemTime;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::OwnedWriteHalf;
 use tokio::net::TcpStream;
+use tokio::sync::RwLock;
 
 pub struct Gaze {
     pub writer: Arc<Mutex<OwnedWriteHalf>>,
     pub reader: Arc<Reader>,
-    models: HashMap<Vec<u8>, Schema>,
+    schemas: Arc<RwLock<HashMap<Vec<u8>, Schema>>>,
 }
 
 impl Gaze {
@@ -55,13 +56,16 @@ impl Gaze {
         /* Create reader: */
         let reader = Arc::new(Reader::new());
 
+        /* Create schemas: */
+        let schemas = Arc::new(RwLock::new(HashMap::new()));
+        
         /* Spawn reader: */
-        tokio::spawn(Reader::read(reader.clone(), stream_reader.clone()));
+        tokio::spawn(Reader::read(reader.clone(), stream_reader.clone(), schemas.clone()));
 
         Ok(Gaze {
             writer,
             reader,
-            models: HashMap::new(),
+            schemas,
         })
     }
     fn generate_message_id() -> Vec<u8> {
@@ -106,18 +110,25 @@ impl Gaze {
         filter: serde_json::Value,
         offset: u64,
     ) -> Result<Receiver<Value>, ()> {
-        let (sender, receiver) = channel::<Value>();
+        let (sender, receiver) = channel::<avro_rs::types::Value>(1000);
 
         let mut writer = self.writer.lock().await;
+        
         /* Write command: */
-        writer.write_command(Command::Message).await;
+        writer.write_command(Command::Subscription).await;
 
         /* Write offset: */
-        writer.write_id(&offset.to_le_bytes()).await;
+        let raw_offset = &offset.to_le_bytes()[2..8];
+        writer.write_id(&raw_offset).await;
+        println!("Offset: {} -> {:?}", offset, raw_offset);
 
         /* Write subscription id: */
         let id = Gaze::generate_subscription_id();
+
+        println!("Subscription {:?} with filter {:?} with offset {} requested", id, filter, offset);
+
         writer.write_id(&id).await;
+
         let filter = match filter {
             serde_json::Value::Array(_) => filter,
             serde_json::Value::Object(_) => serde_json::Value::Array(vec![filter]),
@@ -125,6 +136,8 @@ impl Gaze {
         };
 
         let raw_schema: String = filter.to_string();
+
+        println!("Filter size: {} -> {:?}", raw_schema.len(), (raw_schema.len() as u32).to_le_bytes());
 
         /* Write raw schema size: */
         writer
@@ -135,6 +148,13 @@ impl Gaze {
         /* Write raw schema: */
         writer.write(raw_schema.as_bytes()).await.unwrap();
 
+        /* Register subscription: */
+        let mut subscriptions = self.reader.subscriptions.write().await;
+        subscriptions.insert(id.clone(), sender);
+
+
+        println!("Subscription {:?} request completed", id);
+
         Ok(receiver)
     }
     pub async fn publish<T: Serialize + WithMessageType>(
@@ -142,46 +162,47 @@ impl Gaze {
         message: T,
     ) -> Result<(), Box<dyn Error>> {
         let id = Gaze::generate_message_id();
+        let message_type = Gaze::hash_message_type(message.get_message_type());
+        let schemas = self.schemas.read().await;
+        let schema: &Schema = schemas.get(&message_type).unwrap();
+
+        /* Validate and write schema: */
+        let encoded_message = to_avro_datum(schema, to_value(message).unwrap()).unwrap();
 
         {
+
             let mut writer = self.writer.lock().await;
 
-            let message_type = Gaze::hash_message_type(message.get_message_type());
-
-            let model: &Schema = self.models.get(&message_type).unwrap();
-
-            /* Validate and write model: */
-            let encoded_message = to_avro_datum(model, to_value(message).unwrap()).unwrap();
             /* Write command: */
             writer.write_command(Command::Message).await;
+            println!("Sending message command: {:?}", Command::Message);
 
             /* Write message id: */
-            let id = writer.write_id(&id).await;
+            writer.write_id(&id).await;
+            println!("Message id: {:?}", id);
 
             /* Write message type: */
             writer.write(&message_type).await.unwrap();
+            println!("Message type: {:?}", message_type);
 
             /* Write length: */
             writer.write_size(encoded_message.len()).await;
 
             /* Write message: */
-            println!(
-                "{:?} {}",
-                encoded_message.as_slice(),
-                std::str::from_utf8(encoded_message.as_slice()).unwrap()
-            );
-            writer.write(encoded_message.as_slice()).await.unwrap();
+            writer.write(&encoded_message).await.unwrap();
         }
 
-        //self.reader.expect_ack(id).await.unwrap();
+        self.reader.expect_ack(&id).await.unwrap();
+        println!("Delivery confirmed for {:?}", &id);
 
         Ok(())
     }
-    pub async fn add_model(
+    pub async fn add_type(
         &mut self,
-        definition: serde_json::Value,
+        raw_definition: &str
     ) -> Result<Vec<u8>, Box<dyn Error>> {
-        let raw_definition = definition.as_str().unwrap();
+
+        let definition: serde_json::Value = serde_json::from_str(raw_definition)?;
 
         let root_name = match definition.get("name") {
             Some(value) if value.is_string() => value.as_str().unwrap().to_string(),
@@ -191,12 +212,23 @@ impl Gaze {
             Some(value) if value.is_string() => [value.as_str().unwrap(), "."].concat(),
             _ => "".to_string(),
         };
-        let model: Schema = Schema::parse(&definition)?;
+
+        let schema: Schema = Schema::parse(&definition)?;
 
         let full_message_type = [root_namespace, root_name].concat();
-        let message_type = Gaze::hash_message_type(full_message_type);
-        self.models.insert(message_type.clone(), model.clone());
-        println!("{:?}: {:?}", &message_type, model);
+
+        let message_type = Gaze::hash_message_type(full_message_type.clone());
+        println!("Message type: {} -> {:?}", full_message_type.clone(), message_type.clone());
+        
+        let mut schemas = self.schemas.write().await;
+
+        if let Some(_) = schemas.get(&message_type) {
+            return Ok(message_type)
+        }
+
+        schemas.insert(message_type.clone(), schema.clone());
+        println!("{:?}: {:?}", &message_type, schema);
+
         {
             let mut writer = self.writer.lock().await;
 
@@ -214,6 +246,9 @@ impl Gaze {
                 .write(&(raw_definition.len() as u32).to_le_bytes())
                 .await
                 .expect("Cannot write length");
+            
+            println!("Schema size: {} -> {:?}", raw_definition.len(), (raw_definition.len() as u32).to_le_bytes());
+            println!("Schema: {:?}", raw_definition.as_bytes());
 
             /* Write message: */
             writer

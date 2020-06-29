@@ -17,14 +17,23 @@ impl ReadProtocol for OwnedReadHalf {
     async fn read_command(&mut self) -> Result<Command, ()> {
         let mut command = [0u8; 1];
 
+        println!("Reading command");
         match self.read_exact(&mut command).await {
-            Ok(_) => Ok(Command::try_from(command[0]).unwrap()),
-            Err(_) => Err(()),
+            Ok(_) => {
+                println!("Read {:?}", command[0]);
+                let command = Command::try_from(command[0]).unwrap();
+                println!("Read {:?}", command);
+                Ok(command)
+            },
+            Err(e) => {
+                println!("Error reading command: {:?}", e);
+                Err(())
+            },
         }
     }
 
     async fn read_ack(&mut self) -> Vec<u8> {
-        let mut received_id: Vec<u8> = [0u8; 10].to_vec();
+        let mut received_id: Vec<u8> = [0u8; 6].to_vec();
         self.read_exact(&mut received_id).await.unwrap();
 
         received_id
@@ -52,12 +61,14 @@ pub trait WriteProtocol {
 #[async_trait]
 impl WriteProtocol for OwnedWriteHalf {
     async fn write_size(&mut self, size: usize) {
-        println!("Size is: {}", size);
+        let bytes = &(size as u32).to_le_bytes();
+        println!("Size is {} -> {:?}", size, bytes);
 
-        self.write(&size.to_le_bytes()).await.unwrap();
+        self.write(bytes).await.unwrap();
     }
 
     async fn write_command(&mut self, command: Command) {
+        println!("Writing {:?}", command);
         self.write(&[command as u8]).await.unwrap();
     }
 

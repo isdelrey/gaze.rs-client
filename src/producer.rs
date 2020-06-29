@@ -14,19 +14,18 @@ pub async fn run() {
 
     /* Connect: */
     let mut gaze = Gaze::connect().await.unwrap();
-
+    
+    
     /* Add model: */
-    gaze.add_model(json!({
+    gaze.add_type(r#"{
         "type": "record",
         "namespace": "my.company",
         "name": "user_created",
         "fields": [
             {"name": "name", "type": "string"},
-            {"name": "age", "type": "long"}
+            {"name": "age", "type": "int"}
         ]
-    }))
-    .await
-    .unwrap();
+    }"#).await.unwrap();
 
     /* Publish: */
     loop {
@@ -41,8 +40,7 @@ pub async fn run() {
                 println!("Publish finished by receiving ACK");
             }
             _ => println!("Published failure due to no ACK reception"),
-        }
+        };
+        break;
     }
-
-    ()
 }
