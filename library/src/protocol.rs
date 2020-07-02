@@ -43,7 +43,8 @@ impl ReadProtocol for OwnedReadHalf {
         let mut raw_length = [0u8; 4];
         self.read_exact(&mut raw_length).await.unwrap();
         let length = u32::from_le_bytes(raw_length);
-        let message = vec![0u8; length as usize];
+        let mut message = vec![0u8; length as usize];
+        self.read_exact(&mut message).await.unwrap();
 
         (message, length)
     }

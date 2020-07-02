@@ -35,15 +35,15 @@ pub async fn run() {
     let mut messages: Receiver<avro_rs::types::Value> = gaze.subscribe(
         json!([{
             "$type": "my.company.user_created",
-            "age": {"$gt": 24},
-            "name": "Ivo"
+            "age": {"$lt": 25},
+            "name": {"$ew": "o"}
         }]),
         0,
     )
     .await.unwrap();
 
     while let Some(message) = messages.recv().await {
-        println!("Message {:?} received", message);
+        println!("-> {:?} received", message);
     }
 
     println!("Subscriber finished")

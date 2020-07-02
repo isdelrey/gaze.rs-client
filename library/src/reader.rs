@@ -69,31 +69,38 @@ impl Reader {
                         .read_exact(&mut id)
                         .await
                         .expect("Cannot read message id");
+                    println!("Message id: {:?}", id);
 
                     /* Get message type: */
                     let mut message_type = [0u8; 4];
                     stream_reader
-                        .read_exact(&mut id)
+                        .read_exact(&mut message_type)
                         .await
                         .expect("Cannot read message type");
+                    println!("Message type: {:?}", message_type);
 
                     /* Get subscription id: */
-                    let mut subscription_id = Vec::<u8>::with_capacity(4);
+                    let mut subscription_id = vec![0u8; 4];
                     stream_reader
-                        .read_exact(&mut id)
+                        .read_exact(&mut subscription_id)
                         .await
                         .expect("Cannot read subscription id");
+                    println!("Subscription id: {:?}", subscription_id.clone());
 
                     /* Get message: */
                     let (message, length): (Vec<u8>, u32) = stream_reader.read_message().await;
+                    println!("Length: {:?}", length);
+                    println!("Message: {:?}", message);
 
                     let mut subscriptions = reader.subscriptions.write().await;
                     match subscriptions.get_mut(&subscription_id) {
                         Some(subscriber) => {
+                            println!("Found subscription -> relaying");
                             let schemas = schemas.read().await;
                             let schema = schemas.get(&message_type[..]).unwrap();
                             let decoded_message = from_avro_datum(schema, &mut message.as_slice(), None).unwrap();
-                            subscriber.send(decoded_message);
+                            subscriber.send(decoded_message).await;
+                            println!("Subscription relayed");
                         }
                         None => {}
                     }
