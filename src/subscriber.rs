@@ -11,7 +11,7 @@ struct UserCreated {
 
 pub async fn run() {
     /* Report start: */
-    println!("Subscriber running...");
+    //println!("Subscriber running...");
 
     /* Connect: */
     let mut gaze = Gaze::connect().await.unwrap();
@@ -43,10 +43,10 @@ pub async fn run() {
     .await.unwrap();
 
     while let Some(message) = messages.recv().await {
-        println!("-> {:?} received", message);
+        //println!("-> {:?} received", message);
     }
 
-    println!("Subscriber finished")
+    //println!("Subscriber finished")
 
     // gaze.subscribe(filter!{
     //     UserCreated if name == "Ivo" && age > 20

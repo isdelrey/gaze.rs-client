@@ -10,7 +10,7 @@ struct UserCreated {
 
 pub async fn run() {
     /* Report start: */
-    println!("Producer running...");
+    //println!("Producer running...");
 
     /* Connect: */
     let mut gaze = Gaze::connect().await.unwrap();
@@ -34,12 +34,12 @@ pub async fn run() {
             age: 24,
         };
 
-        println!("{:?}", user_created);
+        //println!("{:?}", user_created);
         match gaze.publish(user_created).await {
             Ok(()) => {
-                println!("Publish finished by receiving ACK");
+                //println!("Publish finished by receiving ACK");
             }
-            _ => println!("Published failure due to no ACK reception"),
+            _ => //println!("Published failure due to no ACK reception"),
         };
     }
 }

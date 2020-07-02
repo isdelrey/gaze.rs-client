@@ -22,11 +22,11 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     let mut stream: TcpStream = match TcpStream::connect(format!("{}:3000", ip)) {
         Ok(stream) => {
-            println!("Connected to server on {}:3000", ip);
+            //println!("Connected to server on {}:3000", ip);
             stream
         },
         Err(error) => {
-            println!("Cannot connect to server: {}", error);
+            //println!("Cannot connect to server: {}", error);
             return;
         }
     };

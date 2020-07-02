@@ -49,7 +49,7 @@ impl VarIntEncoder for usize {
     }
     fn create_varint_vec(self) -> Vec<u8> {
         let size = self.varint_size();
-        println!("Creating size {} vec for encoded varint", size);
+        //println!("Creating size {} vec for encoded varint", size);
         Vec::with_capacity(size)
     }
 

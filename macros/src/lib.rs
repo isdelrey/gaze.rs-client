@@ -12,7 +12,7 @@ pub fn message_type(metadata: TokenStream, input: TokenStream) -> TokenStream {
     let name = input.ident.clone();
     let type_name = metadata.lit;
 
-    println!("{:?}", type_name);
+    //println!("{:?}", type_name);
 
     let output = quote!{
         #[derive(Serialize, Debug)]

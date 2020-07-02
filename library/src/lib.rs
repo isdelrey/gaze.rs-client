@@ -35,15 +35,15 @@ pub struct Gaze {
 impl Gaze {
     pub async fn connect() -> Result<Gaze, Box<dyn Error>> {
         let host = std::env::var("HOST").unwrap();
-        println!("About to connect to Gaze on {}", host);
+        //println!("About to connect to Gaze on {}", host);
 
         let stream: TcpStream = match TcpStream::connect(host.clone()).await {
             Ok(stream) => {
-                println!("Connected to Gaze on {}", host);
+                //println!("Connected to Gaze on {}", host);
                 stream
             }
             Err(error) => {
-                println!("Cannot connect to server: {}", error);
+                //println!("Cannot connect to server: {}", error);
                 return Err(Box::new(error));
             }
         };
@@ -120,12 +120,12 @@ impl Gaze {
         /* Write offset: */
         let raw_offset = &offset.to_le_bytes()[2..8];
         writer.write_id(&raw_offset).await;
-        println!("Offset: {} -> {:?}", offset, raw_offset);
+        //println!("Offset: {} -> {:?}", offset, raw_offset);
 
         /* Write subscription id: */
         let id = Gaze::generate_subscription_id();
 
-        println!("Subscription {:?} with filter {:?} with offset {} requested", id, filter, offset);
+        //println!("Subscription {:?} with filter {:?} with offset {} requested", id, filter, offset);
 
         writer.write_id(&id).await;
 
@@ -137,7 +137,7 @@ impl Gaze {
 
         let raw_schema: String = filter.to_string();
 
-        println!("Filter size: {} -> {:?}", raw_schema.len(), (raw_schema.len() as u32).to_le_bytes());
+        //println!("Filter size: {} -> {:?}", raw_schema.len(), (raw_schema.len() as u32).to_le_bytes());
 
         /* Write raw schema size: */
         writer
@@ -153,7 +153,7 @@ impl Gaze {
         subscriptions.insert(id.clone(), sender);
 
 
-        println!("Subscription {:?} request completed", id);
+        //println!("Subscription {:?} request completed", id);
 
         Ok(receiver)
     }
@@ -175,15 +175,15 @@ impl Gaze {
 
             /* Write command: */
             writer.write_command(Command::Message).await;
-            println!("Sending message command: {:?}", Command::Message);
+            //println!("Sending message command: {:?}", Command::Message);
 
             /* Write message id: */
             writer.write_id(&id).await;
-            println!("Message id: {:?}", id);
+            //println!("Message id: {:?}", id);
 
             /* Write message type: */
             writer.write(&message_type).await.unwrap();
-            println!("Message type: {:?}", message_type);
+            //println!("Message type: {:?}", message_type);
 
             /* Write length: */
             writer.write_size(encoded_message.len()).await;
@@ -193,7 +193,7 @@ impl Gaze {
         }
 
         self.reader.expect_ack(&id).await.unwrap();
-        println!("Delivery confirmed for {:?}", &id);
+        //println!("Delivery confirmed for {:?}", &id);
 
         Ok(())
     }
@@ -218,7 +218,7 @@ impl Gaze {
         let full_message_type = [root_namespace, root_name].concat();
 
         let message_type = Gaze::hash_message_type(full_message_type.clone());
-        println!("Message type: {} -> {:?}", full_message_type.clone(), message_type.clone());
+        //println!("Message type: {} -> {:?}", full_message_type.clone(), message_type.clone());
         
         let mut schemas = self.schemas.write().await;
 
@@ -227,7 +227,7 @@ impl Gaze {
         }
 
         schemas.insert(message_type.clone(), schema.clone());
-        println!("{:?}: {:?}", &message_type, schema);
+        //println!("{:?}: {:?}", &message_type, schema);
 
         {
             let mut writer = self.writer.lock().await;
@@ -247,8 +247,8 @@ impl Gaze {
                 .await
                 .expect("Cannot write length");
             
-            println!("Schema size: {} -> {:?}", raw_definition.len(), (raw_definition.len() as u32).to_le_bytes());
-            println!("Schema: {:?}", raw_definition.as_bytes());
+            //println!("Schema size: {} -> {:?}", raw_definition.len(), (raw_definition.len() as u32).to_le_bytes());
+            //println!("Schema: {:?}", raw_definition.as_bytes());
 
             /* Write message: */
             writer

@@ -17,16 +17,16 @@ impl ReadProtocol for OwnedReadHalf {
     async fn read_command(&mut self) -> Result<Command, ()> {
         let mut command = [0u8; 1];
 
-        println!("Reading command");
+        //println!("Reading command");
         match self.read_exact(&mut command).await {
             Ok(_) => {
-                println!("Read {:?}", command[0]);
+                //println!("Read {:?}", command[0]);
                 let command = Command::try_from(command[0]).unwrap();
-                println!("Read {:?}", command);
+                //println!("Read {:?}", command);
                 Ok(command)
             },
             Err(e) => {
-                println!("Error reading command: {:?}", e);
+                //println!("Error reading command: {:?}", e);
                 Err(())
             },
         }
@@ -63,13 +63,13 @@ pub trait WriteProtocol {
 impl WriteProtocol for OwnedWriteHalf {
     async fn write_size(&mut self, size: usize) {
         let bytes = &(size as u32).to_le_bytes();
-        println!("Size is {} -> {:?}", size, bytes);
+        //println!("Size is {} -> {:?}", size, bytes);
 
         self.write(bytes).await.unwrap();
     }
 
     async fn write_command(&mut self, command: Command) {
-        println!("Writing {:?}", command);
+        //println!("Writing {:?}", command);
         self.write(&[command as u8]).await.unwrap();
     }
 
