@@ -39,7 +39,7 @@ pub async fn run() {
             Ok(()) => {
                 //println!("Publish finished by receiving ACK");
             }
-            _ => //println!("Published failure due to no ACK reception"),
+            _ => {}//println!("Published failure due to no ACK reception"),
         };
     }
 }
