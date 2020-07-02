@@ -37,6 +37,7 @@ pub async fn run() {
         //println!("{:?}", user_created);
         match gaze.publish(user_created).await {
             Ok(()) => {
+                println!("M")
                 //println!("Publish finished by receiving ACK");
             }
             _ => {}//println!("Published failure due to no ACK reception"),
