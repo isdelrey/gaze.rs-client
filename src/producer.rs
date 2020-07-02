@@ -41,6 +41,5 @@ pub async fn run() {
             }
             _ => println!("Published failure due to no ACK reception"),
         };
-        break;
     }
 }
