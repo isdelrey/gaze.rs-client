@@ -37,7 +37,7 @@ impl Reader {
                     //println!("Ack for {:?}", &id);
                     let mut pending_acknowledgements = reader.pending_acknowledgements.lock().await;
                     let sender = pending_acknowledgements.remove(&id).unwrap();
-                    sender.send(true).unwrap();
+                    //sender.send(true).unwrap();
 
                     ();
                 },
