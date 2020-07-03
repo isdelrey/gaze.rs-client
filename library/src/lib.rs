@@ -192,7 +192,7 @@ impl Gaze {
             writer.write(&encoded_message).await.unwrap();
         }
 
-        self.reader.expect_ack(&id).await.unwrap();
+        //self.reader.expect_ack(&id).await.unwrap();
         //println!("Delivery confirmed for {:?}", &id);
 
         Ok(())
