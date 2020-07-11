@@ -102,7 +102,7 @@ impl Gaze {
         let id = &timestamp[2..6];
         Vec::from(id)
     }
-    fn hash_message_type(message_type: String) -> Vec<u8> {
+    pub fn hash_message_type(message_type: String) -> Vec<u8> {
         Vec::from(&xx::hash32(message_type.as_bytes()).to_le_bytes()[..])
     }
     pub async fn subscribe(
@@ -112,10 +112,12 @@ impl Gaze {
     ) -> Result<Receiver<Value>, ()> {
         let (sender, receiver) = channel::<avro_rs::types::Value>(1000);
 
-        let mut writer = self.writer.lock().await;
+       {
+            let mut writer = self.writer.lock().await;
+            
         
         /* Write command: */
-        writer.write_command(Command::Subscription).await;
+        writer.write_command(Command::Subscribe).await;
 
         /* Write offset: */
         let raw_offset = &offset.to_le_bytes()[2..8];
@@ -151,23 +153,22 @@ impl Gaze {
         /* Register subscription: */
         let mut subscriptions = self.reader.subscriptions.write().await;
         subscriptions.insert(id.clone(), sender);
+       }
 
 
         //println!("Subscription {:?} request completed", id);
 
         Ok(receiver)
     }
-    pub async fn publish<T: Serialize + WithMessageType>(
+    pub async fn publish(
         &self,
-        message: T,
+        encoded_message: Vec<u8>,
+        message_type: Vec<u8>
     ) -> Result<(), Box<dyn Error>> {
         let id = Gaze::generate_message_id();
-        let message_type = Gaze::hash_message_type(message.get_message_type());
         let schemas = self.schemas.read().await;
         let schema: &Schema = schemas.get(&message_type).unwrap();
 
-        /* Validate and write schema: */
-        let encoded_message = to_avro_datum(schema, to_value(message).unwrap()).unwrap();
 
         {
 

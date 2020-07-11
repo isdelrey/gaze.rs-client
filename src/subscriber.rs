@@ -35,8 +35,8 @@ pub async fn run() {
     let mut messages: Receiver<avro_rs::types::Value> = gaze.subscribe(
         json!([{
             "$type": "my.company.user_created",
-            "age": {"$lt": 25},
-            "name": {"$ew": "o"}
+            "age": 24,
+            "name": "Ivo"
         }]),
         0,
     )

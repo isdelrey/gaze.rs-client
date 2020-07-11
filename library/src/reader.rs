@@ -35,8 +35,8 @@ impl Reader {
                     let id: Vec<u8> = stream_reader.read_ack().await;
 
                     //println!("Ack for {:?}", &id);
-                    let mut pending_acknowledgements = reader.pending_acknowledgements.lock().await;
-                    let sender = pending_acknowledgements.remove(&id).unwrap();
+                    //let mut pending_acknowledgements = reader.pending_acknowledgements.lock().await;
+                    //let sender = pending_acknowledgements.remove(&id).unwrap();
                     //sender.send(true).unwrap();
 
                     ();

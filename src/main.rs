@@ -3,19 +3,18 @@ mod subscriber;
 
 use std::thread;
 use futures::future::{join_all};
+use tokio::time::delay_for;
 
 #[tokio::main]
 async fn main() {
-    if std::env::var("ROLE").unwrap_or("".to_string()) == "subscriber" {
-        tokio::spawn(subscriber::run());
-    }
-    else {
-        let producers: usize = std::env::var("PRODUCERS").unwrap_or("1".to_string()).parse().expect("Producers env var is not a number");
-        for i in 1..producers + 1 {
-            tokio::spawn(producer::run());
-        }
-    }
+    tokio::spawn(subscriber::run());
+    tokio::spawn(producer::run());
+    // loop {
+    //     for _ in 1..200 { tokio::spawn(producer::run()); }
+    //     delay_for(std::time::Duration::from_secs(30)).await;
+    // }
 
     thread::park();
+    
     ()
 }
