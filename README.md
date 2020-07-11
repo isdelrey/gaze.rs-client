@@ -12,7 +12,7 @@ As a library user, only the `src` folder is interesting. It contains 2 example o
 
 The library folder contains a folder with benchmarkings (see `library/benches`) and the source code of the library (see `library/src`). The main file of the library is `lib.rs`. It provides a Gaze object that can be instantiated and can: connect to Gaze, publish and subscribe.
 
-### 3. Directory sturucture
+### 2. Directory sturucture
 
 ```
 .
@@ -31,7 +31,7 @@ The library folder contains a folder with benchmarkings (see `library/benches`) 
 │   └── subscriber.rs     # Subscribes to messages and listens using a channel
 ```
 
-### 2. How to run
+### 3. How to run
 #### Raw
 To run this project, make sure you have [Rust](https://rustup.rs/) installed. Clone the repo and run `cargo run`.
 
